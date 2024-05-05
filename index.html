@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            background-color: #fff;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: calc(100% - 20px);
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .product-container {
+            float: left;
+            width: 50%;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
+        .cart-container {
+            float: center;
+            width: 50%;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .total {
+            font-weight: bold;
+            text-align: right;
+            margin-top: 10px;
+        }
+    </style>
+    <script src="angular.js"></script>
+    <script>
+        var shoppingCartApp = angular.module('shoppingCartApp', []);
+
+        // Define a service for managing products and cart
+        shoppingCartApp.service('cartService', function($http) {
+            var baseUrl = 'http://localhost:3000/products';
+
+            this.getProducts = function() {
+                return $http.get(baseUrl);
+            }
+
+            this.addProduct = function(product) {
+                return $http.post(baseUrl, product);
+            }
+
+            this.updateProduct = function(product) {
+                return $http.put(baseUrl + '/' + product.id, product);
+            }
+
+            this.deleteProduct = function(id) {
+                return $http.delete(baseUrl + '/' + id);
+            }
+        });
+
+        // Controller to interact with the service
+        shoppingCartApp.controller('shoppingCartController', function($scope, cartService) {
+            $scope.availableProducts = [];
+            $scope.cartProducts = [];
+            $scope.newProduct = {};
+            $scope.totalCost = 0;
+
+            // Load products
+            function loadProducts() {
+                cartService.getProducts()
+                    .then(function(response) {
+                        $scope.availableProducts = response.data;
+                    })
+                    .catch(function(error) {
+                        console.error('Error loading products:', error);
+                    });
+            }
+
+            loadProducts(); // Load products on page load
+
+
+            function generateProductId() {
+                return Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+            }
+
+            function calculateTotalCost() {
+                $scope.totalCost = $scope.cartProducts.reduce(function(total, product) {
+                    return total + (product.unitCost * product.units);
+                }, 0);
+            }
+
+            $scope.addProduct = function() {
+                $scope.newProduct.id = generateProductId();             
+                cartService.addProduct($scope.newProduct)
+                    .then(function(response) {
+                        loadProducts();
+                        $scope.newProduct = {};
+                    })
+            }
+
+            $scope.addProductToCart = function(product) {
+                var cartProduct = angular.copy(product);
+                cartProduct.units = 1;
+                
+                var index = $scope.cartProducts.findIndex(function(p) {
+                    return p.id === product.id;
+                });
+
+                if (index === -1) {
+                    $scope.cartProducts.push(cartProduct);
+                } else {
+                    $scope.cartProducts[index].units++;
+                }
+
+                calculateTotalCost();
+            }
+
+            $scope.removeProductFromCart = function(product) {
+                var index = $scope.cartProducts.indexOf(product);
+                $scope.cartProducts.splice(index, 1);
+                calculateTotalCost();
+            }
+
+            $scope.deleteProduct = function(id) {
+                cartService.deleteProduct(id)
+                    .then(function(response) {
+                        loadProducts();
+                    })
+                    .catch(function(error) {
+                        console.error('Error deleting product:', error);
+                    });
+            }
+
+            $scope.incrementUnits = function(product) {
+                product.units++;
+                calculateTotalCost();
+            }
+
+            $scope.decrementUnits = function(product) {
+                if (product.units > 1) {
+                    product.units--;
+                    calculateTotalCost();
+                }
+            }
+        });
+    </script>
+</head>
+<body ng-app="shoppingCartApp" ng-controller="shoppingCartController">
+    <div class="container">
+        <h1>Shopping Cart</h1>
+        <div class="product-container">
+            <h2>Adding Product</h2>
+            <label for="productName">Name</label>
+            <input type="text" id="productName" ng-model="newProduct.name">
+            <label for="productUnitCost">Unit Cost</label>
+            <input type="number" id="productUnitCost" ng-model="newProduct.unitCost">
+            <button ng-click="addProduct()">Add Product</button>
+        </div>
+        <div class="product-container">
+            <h2>Available Products</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Unit Cost</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="product in availableProducts">
+                        <td>{{product.name}}</td>
+                        <td>{{product.unitCost}}</td>
+                        <td><button ng-click="addProductToCart(product)">Add to Cart</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="cart-container">
+            <h2>Shopping Cart</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Unit Cost</th>
+                        <th>Units</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="product in cartProducts">
+                        <td>{{product.name}}</td>
+                        <td>{{product.unitCost}}</td>
+                        <td>
+                            <button ng-click="decrementUnits(product)">-</button>
+                            {{product.units}}
+                            <button ng-click="incrementUnits(product)">+</button>
+                        </td>
+                        <td><button ng-click="removeProductFromCart(product)">Remove</button></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="total">Total Cost: {{totalCost}}</div>
+        </div>
+    </div>
+</body>
+</html>

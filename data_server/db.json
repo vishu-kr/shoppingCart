@@ -1,0 +1,24 @@
+{
+  "products": [
+    {
+      "id": "1714900561186-j6fm3",
+      "name": "apple",
+      "unitCost": 12
+    },
+    {
+      "id": "1714900567051-g9rpm",
+      "name": "pen",
+      "unitCost": 13
+    },
+    {
+      "id": "1714900579735-afrwr",
+      "name": "mac",
+      "unitCost": 18
+    },
+    {
+      "id": "1714900692635-2z68n",
+      "name": "pen",
+      "unitCost": 12
+    }
+  ]
+}
